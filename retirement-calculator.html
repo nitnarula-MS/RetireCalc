@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Retirement & Net Worth Calculator</title>
+<style>
+:root{
+  --bg:#f7f8fa; --card:#fff; --text:#1a1f2b; --sub:#5b6472; --line:#e2e5ea;
+  --accent:#1f4e78; --accent2:#2f6690; --input:#fffceb; --input-b:#e8d98a;
+  --out:#eef6ee; --grey:#eee; --danger:#b3261e;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+  box-sizing:border-box;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#14171c; --card:#1c212b; --text:#e8eaf0; --sub:#9aa3b2; --line:#2c323d;
+    --accent:#7fb2dd; --accent2:#5c93bd; --input:#2a2a1a; --input-b:#5c5228;
+    --out:#1c2a20; --grey:#242b36; --danger:#ff8a80;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#14171c; --card:#1c212b; --text:#e8eaf0; --sub:#9aa3b2; --line:#2c323d;
+  --accent:#7fb2dd; --accent2:#5c93bd; --input:#2a2a1a; --input-b:#5c5228;
+  --out:#1c2a20; --grey:#242b36; --danger:#ff8a80;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px);}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;font-size:14px;line-height:1.4;}
+.wrap{max-width:1000px;margin:0 auto;padding:20px 16px 60px;}
+h1{font-size:20px;margin:0 0 4px;color:var(--accent);}
+.tag{color:var(--sub);font-size:12px;margin-bottom:18px;}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px;}
+.card h2{font-size:14px;margin:0 0 10px;color:var(--accent2);text-transform:uppercase;letter-spacing:.04em;}
+.grid{display:grid;grid-template-columns:1fr;gap:8px;}
+.row{display:grid;grid-template-columns:1.6fr repeat(var(--n,3),1fr);gap:6px;align-items:center;margin-bottom:4px;}
+.row.head{font-size:11px;color:var(--sub);font-weight:600;}
+.row.head span{text-align:center;}
+label.lbl{font-size:12.5px;}
+input,select{width:100%;padding:6px 7px;border:1px solid var(--input-b);background:var(--input);color:var(--text);border-radius:5px;font-size:13px;}
+input:disabled,select:disabled{opacity:.3;background:var(--grey);}
+.hidden{display:none !important;}
+button{background:var(--accent);color:#fff;border:none;border-radius:7px;padding:11px 18px;font-size:14px;font-weight:600;cursor:pointer;}
+button:hover{background:var(--accent2);}
+.note{font-size:11.5px;color:var(--sub);margin-top:4px;}
+table{border-collapse:collapse;width:100%;font-size:11.5px;}
+th,td{border:1px solid var(--line);padding:4px 5px;text-align:right;white-space:nowrap;}
+th{background:var(--out);position:sticky;top:0;color:var(--text);font-size:10.5px;}
+td:first-child,th:first-child{text-align:center;position:sticky;left:0;background:var(--card);}
+.tblwrap{overflow-x:auto;max-height:70vh;overflow-y:auto;border:1px solid var(--line);border-radius:8px;}
+.neg{color:var(--danger);}
+.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px;}
+.stat{background:var(--out);border-radius:8px;padding:10px;}
+.stat b{display:block;font-size:16px;color:var(--accent);}
+.stat span{font-size:11px;color:var(--sub);}
+details summary{cursor:pointer;font-size:12px;color:var(--sub);margin-bottom:8px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Retirement &amp; Net Worth Calculator</h1>
+<div class="tag">Fill in the sections below, then press Calculate. Nothing is saved anywhere — it's all computed in your browser.</div>
+
+<div class="card">
+<h2>Household</h2>
+<label class="lbl">Number of people (0-3)
+<select id="npeople"><option>0</option><option>1</option><option selected>2</option><option>3</option></select>
+</label>
+<div class="row head" id="pplHead"><span></span><span>Person 1</span><span>Person 2</span><span>Person 3</span></div>
+<div class="row" id="pplHead2"><span></span><span></span><span></span><span></span></div>
+<div class="row"><span class="lbl">Current age</span><input class="p" data-f="age" type="number"><input class="p" data-f="age" type="number"><input class="p" data-f="age" type="number"></div>
+<div class="row"><span class="lbl">Retirement age</span><input class="p" data-f="ret" type="number"><input class="p" data-f="ret" type="number"><input class="p" data-f="ret" type="number"></div>
+</div>
+
+<div class="card">
+<h2>RRSP</h2>
+<div class="row"><span class="lbl">Current balance ($)</span><input class="p" data-f="rrspBal" type="number"><input class="p" data-f="rrspBal" type="number"><input class="p" data-f="rrspBal" type="number"></div>
+<div class="row"><span class="lbl">Monthly contribution ($)</span><input class="p" data-f="rrspPmt" type="number"><input class="p" data-f="rrspPmt" type="number"><input class="p" data-f="rrspPmt" type="number"></div>
+<div class="row"><span class="lbl">Expected return (%/yr)</span><input class="p" data-f="rrspRate" type="number" value="6"><input class="p" data-f="rrspRate" type="number" value="6"><input class="p" data-f="rrspRate" type="number" value="6"></div>
+<div class="row"><span class="lbl">Years to grow</span><input class="p" data-f="rrspYrs" type="number"><input class="p" data-f="rrspYrs" type="number"><input class="p" data-f="rrspYrs" type="number"></div>
+</div>
+
+<div class="card">
+<h2>TFSA</h2>
+<div class="row"><span class="lbl">Current balance ($)</span><input class="p" data-f="tfsaBal" type="number"><input class="p" data-f="tfsaBal" type="number"><input class="p" data-f="tfsaBal" type="number"></div>
+<div class="row"><span class="lbl">Monthly contribution ($)</span><input class="p" data-f="tfsaPmt" type="number"><input class="p" data-f="tfsaPmt" type="number"><input class="p" data-f="tfsaPmt" type="number"></div>
+<div class="row"><span class="lbl">Expected return (%/yr)</span><input class="p" data-f="tfsaRate" type="number" value="6"><input class="p" data-f="tfsaRate" type="number" value="6"><input class="p" data-f="tfsaRate" type="number" value="6"></div>
+<div class="row"><span class="lbl">Years to grow</span><input class="p" data-f="tfsaYrs" type="number"><input class="p" data-f="tfsaYrs" type="number"><input class="p" data-f="tfsaYrs" type="number"></div>
+</div>
+
+<div class="card">
+<h2>Cash / non-registered</h2>
+<div class="row"><span class="lbl">Current balance ($)</span><input class="p" data-f="cashBal" type="number"><input class="p" data-f="cashBal" type="number"><input class="p" data-f="cashBal" type="number"></div>
+<div class="row"><span class="lbl">Monthly contribution ($)</span><input class="p" data-f="cashPmt" type="number"><input class="p" data-f="cashPmt" type="number"><input class="p" data-f="cashPmt" type="number"></div>
+<div class="row"><span class="lbl">Expected return (%/yr)</span><input class="p" data-f="cashRate" type="number" value="6"><input class="p" data-f="cashRate" type="number" value="6"><input class="p" data-f="cashRate" type="number" value="6"></div>
+<div class="row"><span class="lbl">Years to grow</span><input class="p" data-f="cashYrs" type="number"><input class="p" data-f="cashYrs" type="number"><input class="p" data-f="cashYrs" type="number"></div>
+</div>
+
+<div class="card">
+<h2>RESP (education savings)</h2>
+<div class="grid" style="grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;">
+<label class="lbl">Current balance ($)<input id="respBal" type="number"></label>
+<label class="lbl">Monthly contribution ($)<input id="respPmt" type="number"></label>
+<label class="lbl">Return (%/yr)<input id="respRate" type="number" value="6"></label>
+<label class="lbl">Years until maturity<input id="respYrs" type="number"></label>
+</div>
+<div class="note">Its value lands as cash in the year it matures — use it to help cover an education-related major expense below.</div>
+</div>
+
+<div class="card">
+<h2>Major expenses</h2>
+<label class="lbl">Number of major expenses (0-3)
+<select id="nexp"><option selected>0</option><option>1</option><option>2</option><option>3</option></select>
+</label>
+<div class="row head"><span></span><span>Expense 1</span><span>Expense 2</span><span>Expense 3</span></div>
+<div class="row"><span class="lbl">Description</span><input class="e" data-f="desc"><input class="e" data-f="desc"><input class="e" data-f="desc"></div>
+<div class="row"><span class="lbl">Years from now</span><input class="e" data-f="yrs" type="number"><input class="e" data-f="yrs" type="number"><input class="e" data-f="yrs" type="number"></div>
+<div class="row"><span class="lbl">Amount ($, today's $)</span><input class="e" data-f="amt" type="number"><input class="e" data-f="amt" type="number"><input class="e" data-f="amt" type="number"></div>
+</div>
+
+<div class="card">
+<h2>Rental properties</h2>
+<label class="lbl">Number of properties (0-4)
+<select id="nprop"><option selected>0</option><option>1</option><option>2</option><option>3</option><option>4</option></select>
+</label>
+<label class="lbl">Sales cost when selling (%) <input id="salesCost" type="number" value="5" style="width:80px;display:inline-block;"></label>
+<div class="row head" style="--n:4"><span></span><span>Property 1</span><span>Property 2</span><span>Property 3</span><span>Property 4</span></div>
+<div class="row" style="--n:4"><span class="lbl">Name</span><input class="pr" data-f="name"><input class="pr" data-f="name"><input class="pr" data-f="name"><input class="pr" data-f="name"></div>
+<div class="row" style="--n:4"><span class="lbl">Purchase price ($)</span><input class="pr" data-f="price" type="number"><input class="pr" data-f="price" type="number"><input class="pr" data-f="price" type="number"><input class="pr" data-f="price" type="number"></div>
+<div class="row" style="--n:4"><span class="lbl">Mortgage remaining ($)</span><input class="pr" data-f="mort" type="number"><input class="pr" data-f="mort" type="number"><input class="pr" data-f="mort" type="number"><input class="pr" data-f="mort" type="number"></div>
+<div class="row" style="--n:4"><span class="lbl">Years remaining on mortgage</span><input class="pr" data-f="myrs" type="number"><input class="pr" data-f="myrs" type="number"><input class="pr" data-f="myrs" type="number"><input class="pr" data-f="myrs" type="number"></div>
+<div class="row" style="--n:4"><span class="lbl">Interest rate (%)</span><input class="pr" data-f="mrate" type="number"><input class="pr" data-f="mrate" type="number"><input class="pr" data-f="mrate" type="number"><input class="pr" data-f="mrate" type="number"></div>
+<div class="row" style="--n:4"><span class="lbl">Monthly payment ($)</span><input class="pr" data-f="mpmt" type="number"><input class="pr" data-f="mpmt" type="number"><input class="pr" data-f="mpmt" type="number"><input class="pr" data-f="mpmt" type="number"></div>
+<div class="row" style="--n:4"><span class="lbl">Monthly rental income ($)</span><input class="pr" data-f="rent" type="number"><input class="pr" data-f="rent" type="number"><input class="pr" data-f="rent" type="number"><input class="pr" data-f="rent" type="number"></div>
+<div class="row" style="--n:4"><span class="lbl">Years from now to sell (blank = hold)</span><input class="pr" data-f="sell" type="number"><input class="pr" data-f="sell" type="number"><input class="pr" data-f="sell" type="number"><input class="pr" data-f="sell" type="number"></div>
+<div class="row" style="--n:4"><span class="lbl">Appreciation (%/yr)</span><input class="pr" data-f="appr" type="number" value="3"><input class="pr" data-f="appr" type="number" value="3"><input class="pr" data-f="appr" type="number" value="3"><input class="pr" data-f="appr" type="number" value="3"></div>
+</div>
+
+<div class="card">
+<h2>Expenses & assumptions</h2>
+<div class="grid" style="grid-template-columns:1fr 1fr;gap:8px;">
+<label class="lbl">Monthly spending in retirement, today's $ <input id="spend" type="number"></label>
+<label class="lbl">Inflation (%/yr) <input id="infl" type="number" value="2.5"></label>
+<label class="lbl">Blended return during retirement (%/yr) <input id="retRate" type="number" value="6"></label>
+<label class="lbl">RRSP mandatory full-withdrawal age <input id="mandAge" type="number" value="71"></label>
+<label class="lbl">RRSP→TFSA top-up per person ($/yr) <input id="rrspToTfsa" type="number" value="7000"></label>
+<label class="lbl">Years to do the RRSP→TFSA top-up <input id="rrspToTfsaYrs" type="number" value="5"></label>
+</div>
+<div class="note">Withdrawal order: RRSP first, then Cash, then TFSA last. For the first few years of retirement (set above), an extra amount is pulled from RRSP beyond what's needed for spending and moved into TFSA, up to the per-person annual limit — a common strategy to shift money out of taxable RRSP room into tax-free TFSA room while income (and tax) is still low.</div>
+</div>
+
+<div class="card">
+<h2>CPP &amp; OAS</h2>
+<div class="row head"><span></span><span>Person 1</span><span>Person 2</span><span>Person 3</span></div>
+<div class="row"><span class="lbl">CPP monthly at 65 ($)</span><input class="p" data-f="cppAmt" type="number" value="925"><input class="p" data-f="cppAmt" type="number" value="925"><input class="p" data-f="cppAmt" type="number" value="925"></div>
+<div class="row"><span class="lbl">CPP start age</span><input class="p" data-f="cppStart" type="number" value="65"><input class="p" data-f="cppStart" type="number" value="65"><input class="p" data-f="cppStart" type="number" value="65"></div>
+<div class="row"><span class="lbl">OAS monthly at 65 ($)</span><input class="p" data-f="oasAmt" type="number" value="752"><input class="p" data-f="oasAmt" type="number" value="752"><input class="p" data-f="oasAmt" type="number" value="752"></div>
+<div class="row"><span class="lbl">OAS start age</span><input class="p" data-f="oasStart" type="number" value="65"><input class="p" data-f="oasStart" type="number" value="65"><input class="p" data-f="oasStart" type="number" value="65"></div>
+<div class="grid" style="grid-template-columns:1fr 1fr;gap:8px;margin-top:6px;">
+<label class="lbl">OAS clawback threshold ($) <input id="oasThresh" type="number" value="95323"></label>
+<label class="lbl">OAS clawback rate (%) <input id="oasClawRate" type="number" value="15"></label>
+</div>
+<div class="note">Withdrawal order: Cash, then RRSP, then TFSA last — so TFSA growth is preserved as long as possible. CPP is never income-tested. OAS is, per person, above the threshold. Combined federal+Ontario 2026 approximate tax brackets are built in (income split evenly across the household, mimicking pension splitting) — not a tax return, a planning estimate.</div>
+</div>
+
+<button onclick="run()">Calculate</button>
+
+<div id="results" style="margin-top:18px;"></div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+
+function wireCount(sel, cls, n){
+  $(sel).addEventListener('change', e=>{
+    const c = +e.target.value;
+    $$(cls).forEach((el,i)=>{ const idx = i % n; el.disabled = idx>=c; });
+  });
+}
+wireCount('#npeople','.p',3);
+wireCount('#nexp','.e',3);
+wireCount('#nprop','.pr',4);
+window.addEventListener('DOMContentLoaded',()=>{
+  $('#npeople').dispatchEvent(new Event('change'));
+  $('#nexp').dispatchEvent(new Event('change'));
+  $('#nprop').dispatchEvent(new Event('change'));
+});
+
+function num(v){ const n=parseFloat(v); return isNaN(n)?0:n; }
+function personVals(field, idx){ // idx 0,1,2
+  const els = $$(`.p[data-f="${field}"]`);
+  return els[idx] ? num(els[idx].value) : 0;
+}
+function fv(bal,pmt,rate,years){
+  const r=rate/100/12, n=years*12;
+  if(rate===0) return bal+pmt*years*12;
+  return bal*Math.pow(1+r,n)+pmt*(((Math.pow(1+r,n)-1)/r));
+}
+function mortBal(bal,rate,pmt,yrsRemain,elapsed){
+  if(elapsed>=yrsRemain) return 0;
+  const r=(rate/100+1e-9)/12, n=elapsed*12;
+  return Math.max(0, bal*Math.pow(1+r,n)-pmt*(((Math.pow(1+r,n)-1)/r)));
+}
+const BRACKETS=[[0,0,.1905],[53891,7307,.2315],[58523,8379,.2965],[94907,19167,.3148],
+  [107785,23221,.3791],[117045,26731,.4341],[150000,41036,.4497],[181440,55174,.4797],
+  [220000,73674,.4953],[258482,92731,.5353]];
+function taxFor(income){
+  income=Math.max(0,income);
+  let b=BRACKETS[0];
+  for(const row of BRACKETS){ if(income>=row[0]) b=row; else break; }
+  return b[1]+(income-b[0])*b[2];
+}
+
+function run(){
+  const n = +$('#npeople').value;
+  const persons=[];
+  for(let i=0;i<n;i++){
+    persons.push({
+      age: personVals('age',i), ret: personVals('ret',i),
+      rrspBal: personVals('rrspBal',i), rrspPmt: personVals('rrspPmt',i), rrspRate: personVals('rrspRate',i), rrspYrs: personVals('rrspYrs',i),
+      tfsaBal: personVals('tfsaBal',i), tfsaPmt: personVals('tfsaPmt',i), tfsaRate: personVals('tfsaRate',i), tfsaYrs: personVals('tfsaYrs',i),
+      cashBal: personVals('cashBal',i), cashPmt: personVals('cashPmt',i), cashRate: personVals('cashRate',i), cashYrs: personVals('cashYrs',i),
+      cppAmt: personVals('cppAmt',i), cppStart: personVals('cppStart',i), oasAmt: personVals('oasAmt',i), oasStart: personVals('oasStart',i),
+    });
+  }
+  if(n===0){ $('#results').innerHTML='<div class="card">Add at least 1 person to run a projection.</div>'; return; }
+  const clock = persons[0].age; // person1 = household clock
+
+  let rrsp=0,tfsa=0,cash=0;
+  persons.forEach(p=>{
+    rrsp+=fv(p.rrspBal,p.rrspPmt,p.rrspRate,p.rrspYrs);
+    tfsa+=fv(p.tfsaBal,p.tfsaPmt,p.tfsaRate,p.tfsaYrs);
+    cash+=fv(p.cashBal,p.cashPmt,p.cashRate,p.cashYrs);
+  });
+
+  const infl=num($('#infl').value)/100, blend=num($('#retRate').value)/100;
+  const spend0=num($('#spend').value)*12;
+  const mandAge=num($('#mandAge').value);
+  const oasThresh=num($('#oasThresh').value), oasClawRate=num($('#oasClawRate').value)/100;
+
+  // RESP
+  const respBal=fv(num($('#respBal').value),num($('#respPmt').value),num($('#respRate').value),num($('#respYrs').value));
+  const respAge = clock + num($('#respYrs').value);
+
+  // Major expenses
+  const nexp=+$('#nexp').value, exps=[];
+  for(let i=0;i<nexp;i++){
+    const yrs=num($$('.e[data-f="yrs"]')[i].value), amt=num($$('.e[data-f="amt"]')[i].value);
+    exps.push({age: clock+yrs, amt: amt*Math.pow(1+infl,yrs)});
+  }
+
+  // Properties
+  const nprop=+$('#nprop').value, salesCost=num($('#salesCost').value)/100, props=[];
+  for(let i=0;i<nprop;i++){
+    const price=num($$('.pr[data-f="price"]')[i].value), mort=num($$('.pr[data-f="mort"]')[i].value),
+      myrs=num($$('.pr[data-f="myrs"]')[i].value), mrate=num($$('.pr[data-f="mrate"]')[i].value),
+      mpmt=num($$('.pr[data-f="mpmt"]')[i].value), rent=num($$('.pr[data-f="rent"]')[i].value),
+      sellStr=$$('.pr[data-f="sell"]')[i].value, appr=num($$('.pr[data-f="appr"]')[i].value)/100;
+    const sell = sellStr===''?null:num(sellStr);
+    props.push({price,mort,myrs,mrate,mpmt,rent,sell,appr, sellAge: sell===null?null:clock+sell});
+  }
+
+  const startAge = Math.min(...persons.map(p=>p.ret));
+
+  // pre-retirement roll-ins: property sales, RESP, expenses before startAge, grown at blend
+  props.forEach(pr=>{
+    if(pr.sellAge!==null && pr.sellAge<startAge){
+      const mb=mortBal(pr.mort,pr.mrate,pr.mpmt,pr.myrs,pr.sell);
+      const val=pr.price*Math.pow(1+pr.appr,pr.sell);
+      const net=Math.max(0,val-mb)*(1-salesCost);
+      cash += net*Math.pow(1+blend, startAge-pr.sellAge);
+    }
+  });
+  if(num($('#respYrs').value) && respAge<startAge) cash += respBal*Math.pow(1+blend,startAge-respAge);
+  exps.forEach(e=>{ if(e.age<startAge) cash -= e.amt*Math.pow(1+blend,startAge-e.age); });
+
+  let mandatoryDone=false;
+  const rows=[];
+  for(let age=startAge; age<=95; age++){
+    const t=age-clock;
+    const inflT=Math.pow(1+infl,t);
+
+    let oasGross=0, cppInc=0;
+    const personOas=[], personCpp=[];
+    persons.forEach(p=>{
+      const pAge=p.age+t;
+      const o = pAge>=p.oasStart ? p.oasAmt*12*inflT : 0;
+      const c = pAge>=p.cppStart ? p.cppAmt*12*inflT : 0;
+      personOas.push(o); personCpp.push(c);
+      oasGross+=o; cppInc+=c;
+    });
+
+    let saleProceeds=0;
+    props.forEach(pr=>{
+      if(pr.sellAge===age){
+        const mb=mortBal(pr.mort,pr.mrate,pr.mpmt,pr.myrs,pr.sell);
+        const val=pr.price*Math.pow(1+pr.appr,pr.sell);
+        saleProceeds += Math.max(0,val-mb)*(1-salesCost);
+      }
+    });
+    let heldRent=0;
+    props.forEach(pr=>{
+      if(pr.sellAge===null){
+        const rentInc=pr.rent*12*inflT;
+        const pmt = t<pr.myrs ? pr.mpmt*12 : 0;
+        heldRent += rentInc-pmt;
+      }
+    });
+    let respProceeds = (num($('#respYrs').value) && respAge===age) ? respBal : 0;
+    let majExp=0; exps.forEach(e=>{ if(e.age===age) majExp+=e.amt; });
+
+    const spend = spend0*inflT;
+    const mandatory = (!mandatoryDone && age>=mandAge) ? rrsp : 0;
+    if(mandatory>0) mandatoryDone=true;
+
+    const netNeed = spend - oasGross - cppInc - heldRent + majExp - respProceeds;
+    const cashAvail = cash + saleProceeds + mandatory;
+    const rrspAvail = mandatory>0 ? 0 : rrsp;
+    const rrspUsed = Math.min(netNeed, rrspAvail);
+    const remAfterRrsp = Math.max(0, netNeed-rrspAvail);
+    const cashUsed = Math.min(remAfterRrsp, cashAvail);
+    const remAfterCash = Math.max(0, remAfterRrsp-cashAvail);
+    const tfsaUsed = Math.min(remAfterCash, tfsa);
+
+    // RRSP -> TFSA top-up: pull extra RRSP (beyond spending need) and move it into TFSA,
+    // for the first few retirement years, up to a per-person annual limit.
+    const topUpYrs = num($('#rrspToTfsaYrs').value), topUpLimit = num($('#rrspToTfsa').value)*n;
+    const rrspLeftAfterSpend = Math.max(0, rrspAvail-rrspUsed);
+    const topUp = (mandatory===0 && (age-startAge)<topUpYrs) ? Math.min(rrspLeftAfterSpend, topUpLimit) : 0;
+
+    const rrspTaxable = mandatory + rrspUsed + topUp;
+
+    // OAS clawback per person
+    let claw=0;
+    const shared=(rrspTaxable+heldRent)/n;
+    persons.forEach((p,i)=>{
+      const inc=personCpp[i]+personOas[i]+shared;
+      claw += Math.min(personOas[i], Math.max(0, oasClawRate*(inc-oasThresh)));
+    });
+    const oasAfter=oasGross-claw;
+    const taxableIncome = rrspTaxable+oasAfter+cppInc+heldRent;
+    const tax = n>0 ? taxFor(taxableIncome/n)*n : 0;
+    const netAfterTax = spend - tax;
+
+    cash = (cashAvail-cashUsed)*(1+blend);
+    tfsa = (tfsa-tfsaUsed+topUp)*(1+blend);
+    rrsp = (rrspAvail-rrspUsed-topUp)*(1+blend);
+
+    let assetVal=0;
+    props.forEach(pr=>{
+      const include = pr.sellAge===null ? 1 : (age<pr.sellAge?1:0);
+      if(!include) return;
+      const val=pr.price*Math.pow(1+pr.appr,t);
+      const mb=t<pr.myrs?mortBal(pr.mort,pr.mrate,pr.mpmt,pr.myrs,t):0;
+      assetVal += val-mb;
+    });
+    const cashValue=cash+tfsa+rrsp;
+    rows.push({age,rrsp,tfsa,cash,saleProceeds,heldRent,respProceeds,majExp,spend,oasGross,claw,oasAfter,cppInc,
+      mandatory,netNeed,topUp,rrspTaxable,taxableIncome,tax,netAfterTax,cashValue,assetVal,total:cashValue+assetVal});
+  }
+  render(rows);
+}
+
+function fmt(v){ return v==null?'':Math.round(v).toLocaleString(undefined,{maximumFractionDigits:0}); }
+function render(rows){
+  const last=rows[rows.length-1], first=rows[0];
+  let html=`<div class="summary">
+    <div class="stat"><b>${fmt(first.total)}</b><span>Total net worth, age ${first.age}</span></div>
+    <div class="stat"><b>${fmt(last.total)}</b><span>Total net worth, age ${last.age}</span></div>
+    <div class="stat"><b>${fmt(Math.max(...rows.map(r=>r.tax)))}</b><span>Highest single-year tax</span></div>
+  </div>`;
+  const cols=[['age','Age'],['rrsp','RRSP Start'],['tfsa','TFSA Start'],['cash','Cash Start'],
+    ['saleProceeds','Sale Proceeds'],['heldRent','Held Rent Net'],['respProceeds','RESP'],['majExp','Major Exp'],
+    ['spend','Withdrawal Needed'],['oasGross','OAS Gross'],['claw','OAS Clawback'],['oasAfter','OAS After Claw'],
+    ['cppInc','CPP'],['mandatory','Mandatory RRSP'],['netNeed','Net Withdrawal Req'],['topUp','RRSP→TFSA Top-Up'],['rrspTaxable','RRSP Taxable'],
+    ['taxableIncome','Taxable Income'],['tax','Tax'],['netAfterTax','Net After Tax'],
+    ['cashValue','Cash Value End'],['assetVal','Asset Value End'],['total','Total Net Worth End']];
+  html+='<div class="tblwrap"><table><thead><tr>'+cols.map(c=>`<th>${c[1]}</th>`).join('')+'</tr></thead><tbody>';
+  rows.forEach(r=>{
+    html+='<tr>'+cols.map(c=>{
+      const v=r[c[0]];
+      const cls = (typeof v==='number' && v<0) ? ' class="neg"':'';
+      return `<td${cls}>${c[0]==='age'?v:fmt(v)}</td>`;
+    }).join('')+'</tr>';
+  });
+  html+='</tbody></table></div>';
+  $('#results').innerHTML=html;
+}
+</script>
+</body>
+</html>
