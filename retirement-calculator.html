@@ -53,6 +53,10 @@ td:first-child,th:first-child{text-align:center;position:sticky;left:0;backgroun
 .stat{background:var(--out);border-radius:8px;padding:10px;}
 .stat b{display:block;font-size:16px;color:var(--accent);}
 .stat span{font-size:11px;color:var(--sub);}
+.out{background:var(--out);border:1px solid var(--line);border-radius:5px;padding:6px 7px;text-align:center;font-size:13px;}
+.row.tot .lbl{color:var(--accent2);font-weight:600;}
+.totline{font-size:12.5px;margin-top:6px;padding-top:8px;border-top:1px solid var(--line);}
+.totline b{color:var(--accent);}
 details summary{cursor:pointer;font-size:12px;color:var(--sub);margin-bottom:8px;}
 </style>
 </head>
@@ -78,6 +82,8 @@ details summary{cursor:pointer;font-size:12px;color:var(--sub);margin-bottom:8px
 <div class="row"><span class="lbl">Monthly contribution ($)</span><input class="p" data-f="rrspPmt" type="number"><input class="p" data-f="rrspPmt" type="number"><input class="p" data-f="rrspPmt" type="number"></div>
 <div class="row"><span class="lbl">Expected return (%/yr)</span><input class="p" data-f="rrspRate" type="number" value="6"><input class="p" data-f="rrspRate" type="number" value="6"><input class="p" data-f="rrspRate" type="number" value="6"></div>
 <div class="row"><span class="lbl">Years to grow</span><input class="p" data-f="rrspYrs" type="number"><input class="p" data-f="rrspYrs" type="number"><input class="p" data-f="rrspYrs" type="number"></div>
+<div class="row tot"><span class="lbl">Projected value ($)</span><div class="out" id="rrspOut0">—</div><div class="out" id="rrspOut1">—</div><div class="out" id="rrspOut2">—</div></div>
+<div class="totline">Combined RRSP total: <b id="rrspTotal">$0</b></div>
 </div>
 
 <div class="card">
@@ -86,6 +92,8 @@ details summary{cursor:pointer;font-size:12px;color:var(--sub);margin-bottom:8px
 <div class="row"><span class="lbl">Monthly contribution ($)</span><input class="p" data-f="tfsaPmt" type="number"><input class="p" data-f="tfsaPmt" type="number"><input class="p" data-f="tfsaPmt" type="number"></div>
 <div class="row"><span class="lbl">Expected return (%/yr)</span><input class="p" data-f="tfsaRate" type="number" value="6"><input class="p" data-f="tfsaRate" type="number" value="6"><input class="p" data-f="tfsaRate" type="number" value="6"></div>
 <div class="row"><span class="lbl">Years to grow</span><input class="p" data-f="tfsaYrs" type="number"><input class="p" data-f="tfsaYrs" type="number"><input class="p" data-f="tfsaYrs" type="number"></div>
+<div class="row tot"><span class="lbl">Projected value ($)</span><div class="out" id="tfsaOut0">—</div><div class="out" id="tfsaOut1">—</div><div class="out" id="tfsaOut2">—</div></div>
+<div class="totline">Combined TFSA total: <b id="tfsaTotal">$0</b></div>
 </div>
 
 <div class="card">
@@ -94,6 +102,8 @@ details summary{cursor:pointer;font-size:12px;color:var(--sub);margin-bottom:8px
 <div class="row"><span class="lbl">Monthly contribution ($)</span><input class="p" data-f="cashPmt" type="number"><input class="p" data-f="cashPmt" type="number"><input class="p" data-f="cashPmt" type="number"></div>
 <div class="row"><span class="lbl">Expected return (%/yr)</span><input class="p" data-f="cashRate" type="number" value="6"><input class="p" data-f="cashRate" type="number" value="6"><input class="p" data-f="cashRate" type="number" value="6"></div>
 <div class="row"><span class="lbl">Years to grow</span><input class="p" data-f="cashYrs" type="number"><input class="p" data-f="cashYrs" type="number"><input class="p" data-f="cashYrs" type="number"></div>
+<div class="row tot"><span class="lbl">Projected value ($)</span><div class="out" id="cashOut0">—</div><div class="out" id="cashOut1">—</div><div class="out" id="cashOut2">—</div></div>
+<div class="totline">Combined cash total: <b id="cashTotal">$0</b></div>
 </div>
 
 <div class="card">
@@ -104,6 +114,7 @@ details summary{cursor:pointer;font-size:12px;color:var(--sub);margin-bottom:8px
 <label class="lbl">Return (%/yr)<input id="respRate" type="number" value="6"></label>
 <label class="lbl">Years until maturity<input id="respYrs" type="number"></label>
 </div>
+<div class="totline">Projected value at maturity: <b id="respTotal">$0</b></div>
 <div class="note">Its value lands as cash in the year it matures — use it to help cover an education-related major expense below.</div>
 </div>
 
@@ -184,7 +195,30 @@ window.addEventListener('DOMContentLoaded',()=>{
   $('#npeople').dispatchEvent(new Event('change'));
   $('#nexp').dispatchEvent(new Event('change'));
   $('#nprop').dispatchEvent(new Event('change'));
+  updateProjected();
 });
+
+function fmtMoney(v){ return '$'+Math.round(v).toLocaleString(undefined,{maximumFractionDigits:0}); }
+function updateProjected(){
+  const n=+$('#npeople').value;
+  ['rrsp','tfsa','cash'].forEach(sec=>{
+    let total=0;
+    for(let i=0;i<3;i++){
+      const out=$(`#${sec}Out${i}`);
+      if(i>=n){ out.textContent='—'; continue; }
+      const bal=num($$(`.p[data-f="${sec}Bal"]`)[i].value), pmt=num($$(`.p[data-f="${sec}Pmt"]`)[i].value),
+        rate=num($$(`.p[data-f="${sec}Rate"]`)[i].value), yrs=num($$(`.p[data-f="${sec}Yrs"]`)[i].value);
+      const v=fv(bal,pmt,rate,yrs);
+      out.textContent=fmtMoney(v);
+      total+=v;
+    }
+    $(`#${sec}Total`).textContent=fmtMoney(total);
+  });
+  const respV=fv(num($('#respBal').value),num($('#respPmt').value),num($('#respRate').value),num($('#respYrs').value));
+  $('#respTotal').textContent=fmtMoney(respV);
+}
+document.addEventListener('input', e=>{ if(e.target.closest('.card')) updateProjected(); });
+document.addEventListener('change', e=>{ if(e.target.id==='npeople') updateProjected(); });
 
 function num(v){ const n=parseFloat(v); return isNaN(n)?0:n; }
 function personVals(field, idx){ // idx 0,1,2
