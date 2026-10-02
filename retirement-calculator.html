@@ -43,8 +43,8 @@ input:disabled,select:disabled{opacity:.3;background:var(--grey);}
 button{background:var(--accent);color:#fff;border:none;border-radius:7px;padding:11px 18px;font-size:14px;font-weight:600;cursor:pointer;}
 button:hover{background:var(--accent2);}
 .note{font-size:11.5px;color:var(--sub);margin-top:4px;}
-table{border-collapse:collapse;width:100%;font-size:11.5px;}
-th,td{border:1px solid var(--line);padding:4px 5px;text-align:right;white-space:nowrap;}
+table{border-collapse:collapse;width:100%;min-width:2100px;font-size:12px;}
+th,td{border:1px solid var(--line);padding:5px 8px;text-align:right;white-space:nowrap;}
 th{background:var(--out);position:sticky;top:0;color:var(--text);font-size:10.5px;}
 td:first-child,th:first-child{text-align:center;position:sticky;left:0;background:var(--card);}
 .tblwrap{overflow-x:auto;max-height:70vh;overflow-y:auto;border:1px solid var(--line);border-radius:8px;}
@@ -155,9 +155,8 @@ details summary{cursor:pointer;font-size:12px;color:var(--sub);margin-bottom:8px
 <label class="lbl">Blended return during retirement (%/yr) <input id="retRate" type="number" value="6"></label>
 <label class="lbl">RRSP mandatory full-withdrawal age <input id="mandAge" type="number" value="71"></label>
 <label class="lbl">RRSP→TFSA top-up per person ($/yr) <input id="rrspToTfsa" type="number" value="7000"></label>
-<label class="lbl">Years to do the RRSP→TFSA top-up <input id="rrspToTfsaYrs" type="number" value="5"></label>
 </div>
-<div class="note">Withdrawal order: RRSP first, then Cash, then TFSA last. For the first few years of retirement (set above), an extra amount is pulled from RRSP beyond what's needed for spending and moved into TFSA, up to the per-person annual limit — a common strategy to shift money out of taxable RRSP room into tax-free TFSA room while income (and tax) is still low.</div>
+<div class="note">Withdrawal order: RRSP first, then Cash, then TFSA last. Every year from retirement until the RRSP mandatory age above, an extra amount is pulled from RRSP beyond what's needed for spending and moved into TFSA, up to the per-person annual limit — shifting money out of taxable RRSP room into tax-free TFSA room while it's still available. TFSA and Cash withdrawals are never taxed; once the RRSP is fully drawn down, only CPP and OAS (after any clawback) remain taxable.</div>
 </div>
 
 <div class="card">
@@ -312,6 +311,7 @@ function run(){
   const rows=[];
   for(let age=startAge; age<=95; age++){
     const t=age-clock;
+    const rrspStart=rrsp, tfsaStart=tfsa, cashStart=cash;
     const inflT=Math.pow(1+infl,t);
 
     let oasGross=0, cppInc=0;
@@ -358,9 +358,9 @@ function run(){
 
     // RRSP -> TFSA top-up: pull extra RRSP (beyond spending need) and move it into TFSA,
     // for the first few retirement years, up to a per-person annual limit.
-    const topUpYrs = num($('#rrspToTfsaYrs').value), topUpLimit = num($('#rrspToTfsa').value)*n;
+    const topUpLimit = num($('#rrspToTfsa').value)*n;
     const rrspLeftAfterSpend = Math.max(0, rrspAvail-rrspUsed);
-    const topUp = (mandatory===0 && (age-startAge)<topUpYrs) ? Math.min(rrspLeftAfterSpend, topUpLimit) : 0;
+    const topUp = (mandatory===0 && age<mandAge) ? Math.min(rrspLeftAfterSpend, topUpLimit) : 0;
 
     const rrspTaxable = mandatory + rrspUsed + topUp;
 
@@ -389,8 +389,10 @@ function run(){
       assetVal += val-mb;
     });
     const cashValue=cash+tfsa+rrsp;
-    rows.push({age,rrsp,tfsa,cash,saleProceeds,heldRent,respProceeds,majExp,spend,oasGross,claw,oasAfter,cppInc,
-      mandatory,netNeed,topUp,rrspTaxable,taxableIncome,tax,netAfterTax,cashValue,assetVal,total:cashValue+assetVal});
+    rows.push({age,saleProceeds,heldRent,respProceeds,majExp,spend,oasGross,claw,oasAfter,cppInc,
+      mandatory,netNeed,topUp,rrspTaxable,taxableIncome,tax,netAfterTax,
+      rrspStart,rrspEnd:rrsp,tfsaStart,tfsaEnd:tfsa,cashStart,cashEnd:cash,
+      cashValue,assetVal,total:cashValue+assetVal});
   }
   render(rows);
 }
@@ -403,11 +405,12 @@ function render(rows){
     <div class="stat"><b>${fmt(last.total)}</b><span>Total net worth, age ${last.age}</span></div>
     <div class="stat"><b>${fmt(Math.max(...rows.map(r=>r.tax)))}</b><span>Highest single-year tax</span></div>
   </div>`;
-  const cols=[['age','Age'],['rrsp','RRSP Start'],['tfsa','TFSA Start'],['cash','Cash Start'],
+  const cols=[['age','Age'],['rrspStart','RRSP Start'],['tfsaStart','TFSA Start'],['cashStart','Cash Start'],
     ['saleProceeds','Sale Proceeds'],['heldRent','Held Rent Net'],['respProceeds','RESP'],['majExp','Major Exp'],
     ['spend','Withdrawal Needed'],['oasGross','OAS Gross'],['claw','OAS Clawback'],['oasAfter','OAS After Claw'],
     ['cppInc','CPP'],['mandatory','Mandatory RRSP'],['netNeed','Net Withdrawal Req'],['topUp','RRSP→TFSA Top-Up'],['rrspTaxable','RRSP Taxable'],
     ['taxableIncome','Taxable Income'],['tax','Tax'],['netAfterTax','Net After Tax'],
+    ['rrspEnd','RRSP End'],['tfsaEnd','TFSA End'],['cashEnd','Cash End'],
     ['cashValue','Cash Value End'],['assetVal','Asset Value End'],['total','Total Net Worth End']];
   html+='<div class="tblwrap"><table><thead><tr>'+cols.map(c=>`<th>${c[1]}</th>`).join('')+'</tr></thead><tbody>';
   rows.forEach(r=>{
